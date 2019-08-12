@@ -4,6 +4,7 @@ import random
 
 TIC_TIMEOUT = 0.01
 STARS_AMOUNT = 100
+BORDER_WIDTH = 2
 
 SPACE_KEY_CODE = 32
 LEFT_KEY_CODE = 260
@@ -44,9 +45,9 @@ def read_controls(canvas):
 
 def load_spaceship_frames():
     """Load frames from files"""
-    with open('animation_frames/rocket_frame_1.txt', 'rb') as file:
+    with open('animation_frames/rocket_frame_1.txt', 'r') as file:
         frame1 = file.read()
-    with open('animation_frames/rocket_frame_2.txt', 'rb') as file:
+    with open('animation_frames/rocket_frame_2.txt', 'r') as file:
         frame2 = file.read()
     return (frame1, frame2)
 
@@ -60,7 +61,7 @@ def get_frame_size(text):
     columns = max([len(line) for line in lines])
     return rows, columns
 
-async def spaceship(canvas, row, column, spaceship_frames):
+async def draw_spaceship(canvas, row, column, spaceship_frames):
     """Render frames of spaceship"""
     for frame in spaceship_frames:
         times = int(2//TIC_TIMEOUT)
@@ -69,7 +70,7 @@ async def spaceship(canvas, row, column, spaceship_frames):
             await asyncio.sleep(0)
             draw_frame(canvas, row, column, frame, negative=True)
 
-async def fire(canvas, start_row, start_column, 
+async def fire(canvas, start_row, start_column,
         rows_speed=-0.3, columns_speed=0):
     """Display animation of gun shot. Direction and speed can be specified."""
 
@@ -164,49 +165,49 @@ def draw(canvas):
     canvas.border()
     canvas.nodelay(True)
     curses.curs_set(False)
-    max_row, max_column = canvas.getmaxyx()
+    canvas_height, canvas_width = canvas.getmaxyx()
 
     spaceship_frames = load_spaceship_frames()
-    spaceship_row = int(max_row//2-1)
-    spaceship_column = int(max_column//2-1)
+    spaceship_row = int(canvas_height//2-1)
+    spaceship_column = int(canvas_width//2-1)
     spaceship_frame_row, spaceship_frame_column = \
         get_frame_size(spaceship_frames[0])
-    animate_spaceship = spaceship(
-        canvas, spaceship_row, spaceship_column, spaceship_frames
-    )
-
+    
     fire_row = spaceship_row + int(spaceship_frame_row//2)
     fire_column = spaceship_column + int(spaceship_frame_column//2)
     fire_active = True
     fires = fire(canvas, fire_row, fire_column, rows_speed=-0.01)
 
-    stars = []
+    coroutines = []
     for _ in range(0, STARS_AMOUNT):
-        row = random.randint(1, max_row-2)
-        column = random.randint(1, max_column-2)
+        row = random.randint(BORDER_WIDTH, canvas_height-BORDER_WIDTH)
+        column = random.randint(BORDER_WIDTH, canvas_width-BORDER_WIDTH)
         symbol = random.choice('+*.:')
-        stars.append(blink(canvas, row, column, symbol))
-
+        coroutines.append(blink(canvas, row, column, symbol))
+    animate_spaceship = draw_spaceship(
+        canvas, spaceship_row, spaceship_column, spaceship_frames
+    )
+    
     while True:
         rows_direction, columns_direction, space_pressed = \
             read_controls(canvas)
         spaceship_row = min(
-            max_row-spaceship_frame_row-1,
+            canvas_height-spaceship_frame_row-1,
             spaceship_row + rows_direction
         )
         spaceship_row = max(1, spaceship_row + rows_direction)
         spaceship_column = min(
-            max_column-spaceship_frame_column-1,
+            canvas_width-spaceship_frame_column-1,
             spaceship_column + columns_direction
         )
         spaceship_column = max(1, spaceship_column + columns_direction)
 
-        for star in stars:
-            star.send(None)
+        for coroutine in coroutines:
+            coroutine.send(None)
         try:
             animate_spaceship.send(None)
         except StopIteration:
-            animate_spaceship = spaceship(
+            animate_spaceship = draw_spaceship(
                 canvas,
                 spaceship_row,
                 spaceship_column,
