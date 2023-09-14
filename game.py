@@ -1,6 +1,7 @@
 import asyncio
 import curses
 import random
+from itertools import cycle
 
 TIC_TIMEOUT = 0.01
 STARS_AMOUNT = 100
@@ -61,44 +62,45 @@ def get_frame_size(text):
     columns = max([len(line) for line in lines])
     return rows, columns
 
+
 async def draw_spaceship(canvas, spaceship_row, spaceship_column,
-        canvas_height, canvas_width):
+        canvas_height, canvas_width, spaceship_frames):
     """Render frames of spaceship"""
     spaceship_frames = load_spaceship_frames()
     spaceship_frame_row, spaceship_frame_column = get_frame_size(
         spaceship_frames[0]
     )
     times = int(2//TIC_TIMEOUT)
-    while True:
-        for frame in spaceship_frames:
-            for __ in range(0, times):
-                draw_frame(
-                    canvas, spaceship_row, spaceship_column,
-                    frame, negative=False
-                )
-                await asyncio.sleep(0)
-                draw_frame(
-                    canvas, spaceship_row, spaceship_column,
-                    frame, negative=True
-                )
-                rows_direction, columns_direction, space_pressed = \
-                    read_controls(canvas)
-                spaceship_row = min(
-                    canvas_height-spaceship_frame_row-BORDER_WIDTH,
-                    spaceship_row + rows_direction
-                )
-                spaceship_row = max(
-                    BORDER_WIDTH//2,
-                    spaceship_row + rows_direction
-                )
-                spaceship_column = min(
-                    canvas_width-spaceship_frame_column-BORDER_WIDTH,
-                    spaceship_column + columns_direction
-                )
-                spaceship_column = max(
-                    BORDER_WIDTH//2,
-                    spaceship_column + columns_direction
-                )
+
+    for frame in cycle(spaceship_frames):
+        for __ in range(0, times):
+            draw_frame(
+                canvas, spaceship_row, spaceship_column,
+                frame, negative=False
+            )
+            await asyncio.sleep(0)
+            draw_frame(
+                canvas, spaceship_row, spaceship_column,
+                frame, negative=True
+            )
+            rows_direction, columns_direction, space_pressed = \
+                read_controls(canvas)
+            spaceship_row = min(
+                canvas_height-spaceship_frame_row-BORDER_WIDTH,
+                spaceship_row + rows_direction
+            )
+            spaceship_row = max(
+                BORDER_WIDTH//2,
+                spaceship_row + rows_direction
+            )
+            spaceship_column = min(
+                canvas_width-spaceship_frame_column-BORDER_WIDTH,
+                spaceship_column + columns_direction
+            )
+            spaceship_column = max(
+                BORDER_WIDTH//2,
+                spaceship_column + columns_direction
+            )
 
 
 async def fire(canvas, start_row, start_column,
@@ -132,6 +134,7 @@ async def fire(canvas, start_row, start_column,
         canvas.addstr(round(row), round(column), ' ')
         row += rows_speed
         column += columns_speed
+
 
 async def blink(canvas, row, column, symbol='*'):
     """Render star"""
@@ -204,6 +207,8 @@ def draw(canvas):
     canvas_height, canvas_width = canvas.getmaxyx()
     coroutines = []
 
+    spaceship_frames = load_spaceship_frames()
+
     for _ in range(0, STARS_AMOUNT):
         row = random.randint(BORDER_WIDTH, canvas_height-BORDER_WIDTH)
         column = random.randint(BORDER_WIDTH, canvas_width-BORDER_WIDTH)
@@ -213,7 +218,8 @@ def draw(canvas):
     spaceship_row = int(canvas_height//2-1)
     spaceship_column = int(canvas_width//2-1)
     coroutines.append(draw_spaceship(
-        canvas, spaceship_row, spaceship_column, canvas_height, canvas_width
+        canvas, spaceship_row, spaceship_column,
+        canvas_height, canvas_width, spaceship_frames,
     ))
     coroutines.append(
         fire(canvas, spaceship_row, spaceship_column, rows_speed=-0.01)
@@ -226,6 +232,7 @@ def draw(canvas):
                 coroutine.send(None)
             except StopIteration:
                 coroutines.remove(coroutine)
+
 
 if __name__ == '__main__':
     curses.update_lines_cols()
