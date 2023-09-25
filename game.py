@@ -141,19 +141,19 @@ async def blink(canvas, row, column, symbol='*'):
 
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        times = int(2//TIC_TIMEOUT)
+        times = round(2/TIC_TIMEOUT)
         await sleep(tics=times)
 
         canvas.addstr(row, column, symbol)
-        times = int(0.3//TIC_TIMEOUT)
+        times = round(0.3/TIC_TIMEOUT)
         await sleep(tics=times)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        times = int(0.5//TIC_TIMEOUT)
+        times = round(0.5/TIC_TIMEOUT)
         await sleep(tics=times)
 
         canvas.addstr(row, column, symbol)
-        times = int(0.3//TIC_TIMEOUT)
+        times = round(0.3/TIC_TIMEOUT)
         await sleep(tics=times)
 
 
