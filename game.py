@@ -254,7 +254,7 @@ def draw(canvas):
 
     while True:
         canvas.refresh()
-        for coroutine in coroutines:
+        for coroutine in list(coroutines):
             try:
                 coroutine.send(None)
             except StopIteration:
